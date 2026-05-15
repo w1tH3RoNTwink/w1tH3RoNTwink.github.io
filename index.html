@@ -1,1 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Продолжить просмотр</title>
+    <style>
+        /* Базовые стили для полной темноты */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0b0b0b;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            cursor: pointer; /* Показывает, что на экран можно кликнуть */
+            user-select: none;
+        }
 
+        /* Приятный, эстетичный контейнер для приветствия */
+        #welcome-container {
+            text-align: center;
+            color: #e0e0e0;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Элегантный текст с пульсирующей анимацией */
+        .prompt-text {
+            font-size: 20px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            animation: pulse 2.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.4; transform: scale(0.98); }
+            50% { opacity: 1; transform: scale(1); text-shadow: 0 0 15px rgba(255, 255, 255, 0.4); }
+            100% { opacity: 0.4; transform: scale(0.98); }
+        }
+
+        /* Видео скрыто до момента активации */
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+            background-color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Эстетичная заставка-приманка -->
+    <div id="welcome-container">
+        <p class="prompt-text">Нажмите любую клавишу для продолжения</p>
+    </div>
+
+    <!-- Элементы скримера -->
+    <video id="screamer-video" src="vidio.mp4" preload="auto"></video>
+    <audio id="screamer-sound" src="sound.mp3" preload="auto"></audio>
+
+    <script>
+        const container = document.getElementById('welcome-container');
+        const video = document.getElementById('screamer-video');
+        const audio = document.getElementById('screamer-sound');
+        
+        let activated = false;
+
+        // Функция запуска скримера
+        function startScreamer() {
+            if (activated) return; // Защита от повторного срабатывания
+            activated = true;
+
+            // 1. Скрываем текст заставки
+            container.style.display = 'none';
+            video.style.display = 'block';
+
+            // 2. Запрос полноэкранного режима для всей страницы
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) {
+                docEl.requestFullscreen();
+            } else if (docEl.mozRequestFullScreen) {
+                docEl.mozRequestFullScreen();
+            } else if (docEl.webkitRequestFullscreen) {
+                docEl.webkitRequestFullscreen();
+            }
+
+            // 3. Выставляем максимальную громкость
+            video.volume = 1.0;
+            audio.volume = 1.0;
+
+            // 4. Одновременный запуск видео и аудио
+            video.play().catch(err => console.log("Ошибка видео:", err));
+            audio.play().catch(err => console.log("Ошибка аудио:", err));
+        }
+
+        // Отслеживание нажатия любой клавиши на клавиатуре
+        window.addEventListener('keydown', startScreamer);
+
+        // Отслеживание клика мышкой (на случай, если пользователь решит кликнуть)
+        window.addEventListener('click', startScreamer);
+    </script>
+</body>
+</html>
