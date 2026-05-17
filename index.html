@@ -3,214 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Надежный LAN Чат</title>
+    <title>QR LAN Чат</title>
+    <!-- Подключаем библиотеки для QR-кодов -->
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://jsdelivr.net"></script>
     <style>
         body {
-            margin: 0;
-            padding: 10px;
-            background: #1e1e1e;
-            color: #fff;
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            height: 95vh;
-            box-sizing: border-box;
+            margin: 0; padding: 10px; background: #1e1e1e; color: #fff;
+            font-family: sans-serif; display: flex; flex-direction: column; height: 95vh; box-sizing: border-box;
         }
         h2 { margin: 5px 0; font-size: 1.2rem; text-align: center; }
-        .section {
-            background: #2d2d2d;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-        textarea {
-            width: 100%;
-            height: 80px;
-            background: #3d3d3d;
-            color: #fff;
-            border: 1px solid #555;
-            border-radius: 4px;
-            resize: none;
-            box-sizing: border-box;
-            font-size: 14px;
-            margin-top: 5px;
-            padding: 5px;
-        }
+        .section { background: #2d2d2d; padding: 15px; border-radius: 8px; margin-bottom: 10px; text-align: center; }
         button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 8px;
-            background: #28a745;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 15px;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
+            width: 100%; padding: 15px; margin-top: 8px; background: #28a745; color: white;
+            border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer;
         }
         button:active { opacity: 0.8; }
-        #chat-area {
-            flex-grow: 1;
-            background: #252526;
-            border-radius: 8px;
-            padding: 10px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        .msg {
-            padding: 8px 12px;
-            border-radius: 12px;
-            max-width: 80%;
-            word-break: break-word;
-            font-size: 14px;
-        }
+        #qr-canvas { background: white; padding: 10px; border-radius: 8px; margin: 10px auto; display: none; max-width: 200px; max-height: 200px; }
+        #reader { width: 100%; max-width: 300px; margin: 10px auto; background: #000; border-radius: 8px; overflow: hidden; display: none; }
+        #chat-area { flex-grow: 1; background: #252526; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px; }
+        .msg { padding: 8px 12px; border-radius: 12px; max-width: 80%; word-break: break-word; font-size: 14px; }
         .msg.me { background: #007bff; align-self: flex-end; }
         .msg.other { background: #3a3a3c; align-self: flex-start; }
         .msg.system { background: transparent; color: #aaa; align-self: center; font-size: 12px; }
         #input-row { display: flex; gap: 5px; }
-        #msg-input { flex-grow: 1; padding: 10px; border-radius: 4px; border: 1px solid #555; background: #3d3d3d; color: white; font-size: 16px; }
+        #msg-input { flex-grow: 1; padding: 12px; border-radius: 8px; border: 1px solid #555; background: #3d3d3d; color: white; font-size: 16px; }
         #status { text-align: center; color: #ffc107; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-    <h2>P2P LAN Чат</h2>
-    <div id="status">Статус: Выберите роль</div>
+    <h2>QR LAN Чат</h2>
+    <div id="status">Шаг 1: Выберите роль на телефонах</div>
 
     <div class="section" id="setup-block">
         <div id="step-1">
-            <button id="btn-role-host" style="background:#28a745;">1. Я Создатель (Хост)</button>
-            <button id="btn-role-client" style="background:#007bff;">1. Я Подключаюсь (Клиент)</button>
+            <button id="btn-role-host" style="background:#28a745;">Я Создатель (Показать QR)</button>
+            <button id="btn-role-client" style="background:#007bff;">Я Подключаюсь (Сканировать QR)</button>
         </div>
 
         <div id="step-2" style="display:none;">
-            <p id="setup-instruction" style="margin:5px 0; font-size:13px; color:#ffc107;"></p>
-            <textarea id="token-output" readonly placeholder="Здесь появится ваш код..."></textarea>
-            
-            <p style="margin:15px 0 5px 0; font-size:13px;">Вставьте код от другого телефона сюда:</p>
-            <textarea id="token-input" placeholder="Вставьте код сюда..."></textarea>
-            <button id="btn-connect" style="background:#e0a800; color:black;">2. Подтвердить код</button>
+            <p id="instruction" style="margin:5px 0; font-size:14px; color:#ffc107;"></p>
+            <!-- Место для показа QR кода -->
+            <canvas id="qr-canvas"></canvas>
+            <!-- Место для сканера камеры -->
+            <div id="reader"></div>
+            <button id="btn-next-step" style="background:#e0a800; color:black; display:none;"></button>
         </div>
     </div>
 
-    <div id="chat-area">
-        <div class="msg system">Интерфейс готов к работе.</div>
-    </div>
+    <div id="chat-area"><div class="msg system">Ждём подключения...</div></div>
 
     <div id="input-row">
         <input type="text" id="msg-input" placeholder="Сообщение..." disabled>
-        <button id="btn-send" style="width:auto; margin:0; padding:10px 15px;" disabled>➡️</button>
+        <button id="btn-send" style="width:auto; margin:0; padding:10px 20px; border-radius:8px;" disabled>➡️</button>
     </div>
 
 <script>
-    // Отключаем STUN серверы, работаем только локально
     let pc = new RTCPeerConnection({ iceServers: [] }); 
     let dataChannel = null;
+    let html5QrcodeScanner = null;
 
     const statusDiv = document.getElementById('status');
     const chatArea = document.getElementById('chat-area');
     const msgInput = document.getElementById('msg-input');
     const btnSend = document.getElementById('btn-send');
-    const tokenOutput = document.getElementById('token-output');
-    const tokenInput = document.getElementById('token-input');
+    const qrCanvas = document.getElementById('qr-canvas');
+    const readerDiv = document.getElementById('reader');
+    const btnNextStep = document.getElementById('btn-next-step');
+    const instruction = document.getElementById('instruction');
 
-    // Клик по верхнему полю автоматически выделяет весь текст (удобно копировать на смартфонах)
-    tokenOutput.addEventListener('click', function() {
-        this.select();
-        this.setSelectionRange(0, 99999);
-    });
+    // Сжатие данных, чтобы QR-код был проще и легче сканировался
+    function pack(desc) { return btoa(JSON.stringify({t: desc.type, s: desc.sdp})); }
+    function unpack(str) { const d = JSON.parse(atob(str)); return new RTCSessionDescription({type: d.t, sdp: d.s}); }
 
-    // Роль ХОСТА
+    // РОЛЬ ХОСТА (Создатель)
     document.getElementById('btn-role-host').onclick = async function() {
-        showSetupStep2("Скопируйте код ниже (нажмите на него) и отправьте Клиенту:");
-        
-        try {
-            dataChannel = pc.createDataChannel("chatChannel");
-            setupDataChannelHandlers();
+        showStep2("Генерация QR-кода...");
+        dataChannel = pc.createDataChannel("chatChannel");
+        setupDataChannelHandlers();
 
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
 
-            pc.onicecandidate = (e) => {
-                if (!e.candidate) {
-                    tokenOutput.value = btoa(JSON.stringify(pc.localDescription));
-                    statusDiv.innerText = "Статус: Код создан. Ожидание ответа.";
-                }
-            };
-        } catch(err) {
-            alert("Ошибка создания подключения: " + err.message);
-        }
-    };
-
-    // Роль КЛИЕНТА
-    document.getElementById('btn-role-client').onclick = function() {
-        showSetupStep2("Вставьте код от Хоста в нижнее поле и нажмите Подтвердить:");
-        
-        pc.ondatachannel = (e) => {
-            dataChannel = e.channel;
-            setupDataChannelHandlers();
+        pc.onicecandidate = (e) => {
+            if (!e.candidate) {
+                instruction.innerText = "Телефон 2 должен отсканировать этот QR-код:";
+                qrCanvas.style.display = "block";
+                QRCode.toCanvas(qrCanvas, pack(pc.localDescription), { width: 200 });
+                
+                // Переходим к ожиданию ответа от клиента
+                btnNextStep.innerText = "Перейти к сканированию ответа";
+                btnNextStep.style.display = "block";
+                btnNextStep.onclick = () => {
+                    qrCanvas.style.display = "none";
+                    btnNextStep.style.display = "none";
+                    startScanner("Теперь отсканируйте ответный QR-код с экрана Телефона 2:");
+                };
+            }
         };
     };
 
-    // Кнопка подтверждения
-    document.getElementById('btn-connect').onclick = async function() {
-        const rawToken = tokenInput.value.trim();
-        if (!rawToken) {
-            alert("Поле пустое! Вставьте текст.");
-            return;
-        }
-
-        try {
-            const parsedDesc = JSON.parse(atob(rawToken));
-            await pc.setRemoteDescription(new RTCSessionDescription(parsedDesc));
-
-            if (pc.remoteDescription.type === "offer") {
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-
-                pc.onicecandidate = (e) => {
-                    if (!e.candidate) {
-                        tokenOutput.value = btoa(JSON.stringify(pc.localDescription));
-                        statusDiv.innerText = "Статус: Отправьте ответный код Хосту!";
-                        alert("Ответный код создан в верхнем поле! Передайте его Хосту.");
-                    }
-                };
-            }
-        } catch (err) {
-            alert("Ошибка! Неверный код. Проверьте, что скопировали его целиком.");
-        }
+    // РОЛЬ КЛИЕНТА (Подключающийся)
+    document.getElementById('btn-role-client').onclick = function() {
+        pc.ondatachannel = (e) => { dataChannel = e.channel; setupDataChannelHandlers(); };
+        startScanner("Отсканируйте QR-код на экране Телефона 1:");
     };
+
+    // Функция запуска камеры для сканирования
+    function startScanner(textPrompt) {
+        showStep2(textPrompt);
+        readerDiv.style.display = "block";
+        
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        html5QrcodeScanner.start(
+            { facingMode: "environment" }, 
+            { fps: 10, qrbox: 250 },
+            async (decodedText) => {
+                // Код успешно отсканирован!
+                stopScanner();
+                try {
+                    const remoteDesc = unpack(decodedText);
+                    await pc.setRemoteDescription(remoteDesc);
+
+                    // Если мы клиент, создаем ответный QR
+                    if (pc.remoteDescription.type === "offer") {
+                        instruction.innerText = "Генерация ответного QR...";
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+
+                        pc.onicecandidate = (e) => {
+                            if (!e.candidate) {
+                                instruction.innerText = "Покажите этот ответный QR Создателю (Телефон 1):";
+                                qrCanvas.style.display = "block";
+                                QRCode.toCanvas(qrCanvas, pack(pc.localDescription), { width: 200 });
+                                statusDiv.innerText = "Статус: Ожидание подтверждения от Хоста";
+                            }
+                        };
+                    }
+                } catch(err) {
+                    alert("Ошибка сканирования. Попробуйте еще раз.");
+                    startScanner(textPrompt);
+                }
+            },
+            () => {} // Ошибка сканирования кадра (игнорируем)
+        ).catch(err => alert("Не удалось включить камеру. Проверьте HTTPS!"));
+    }
+
+    function stopScanner() {
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.stop().then(() => { readerDiv.style.display = "none"; });
+        }
+    }
 
     function setupDataChannelHandlers() {
         dataChannel.onopen = () => {
-            statusDiv.innerText = "Подключено по локальной сети!";
+            stopScanner();
+            statusDiv.innerText = "Подключено по LAN!";
             statusDiv.style.color = "#28a745";
             document.getElementById('setup-block').style.display = "none";
-            msgInput.disabled = false;
-            btnSend.disabled = false;
-            logSystemMessage("Соединение установлено напрямую!");
+            msgInput.disabled = false; btnSend.disabled = false;
+            logSystemMessage("Связь установлена напрямую!");
         };
-
         dataChannel.onclose = () => {
-            statusDiv.innerText = "Отключено";
-            statusDiv.style.color = "#dc3545";
-            msgInput.disabled = true;
-            btnSend.disabled = true;
+            statusDiv.innerText = "Отключено"; statusDiv.style.color = "#dc3545";
+            msgInput.disabled = true; btnSend.disabled = true;
         };
-
-        dataChannel.onmessage = (e) => {
-            appendMessage(e.data, 'other');
-        };
+        dataChannel.onmessage = (e) => appendMessage(e.data, 'other');
     }
 
     function sendMessage() {
         const text = msgInput.value.trim();
         if (!text || !dataChannel || dataChannel.readyState !== "open") return;
-        
         dataChannel.send(text);
         appendMessage(text, 'me');
         msgInput.value = "";
@@ -219,25 +183,20 @@
     btnSend.onclick = sendMessage;
     msgInput.onkeydown = (e) => { if (e.key === 'Enter') sendMessage(); };
 
-    function showSetupStep2(instruction) {
+    function showStep2(text) {
         document.getElementById('step-1').style.display = 'none';
         document.getElementById('step-2').style.display = 'block';
-        document.getElementById('setup-instruction').innerText = instruction;
-        statusDiv.innerText = "Статус: Настройка токенов";
+        instruction.innerText = text;
+        statusDiv.innerText = "Статус: Сопряжение по QR";
     }
 
     function appendMessage(text, side) {
-        const el = document.createElement('div');
-        el.classList.add('msg', side);
-        el.innerText = text;
-        chatArea.appendChild(el);
-        chatArea.scrollTop = chatArea.scrollHeight;
+        const el = document.createElement('div'); el.classList.add('msg', side); el.innerText = text;
+        chatArea.appendChild(el); chatArea.scrollTop = chatArea.scrollHeight;
     }
 
     function logSystemMessage(text) {
-        const el = document.createElement('div');
-        el.classList.add('msg', 'system');
-        el.innerText = text;
+        const el = document.createElement('div'); el.classList.add('msg', 'system'); el.innerText = text;
         chatArea.appendChild(el);
     }
 </script>
