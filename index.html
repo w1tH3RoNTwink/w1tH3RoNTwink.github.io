@@ -2,203 +2,474 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>QR LAN Чат</title>
-    <!-- Подключаем библиотеки для QR-кодов -->
-    <script src="https://jsdelivr.net"></script>
-    <script src="https://jsdelivr.net"></script>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+    <title>WithFruit Virtual Piano</title>
     <style>
-        body {
-            margin: 0; padding: 10px; background: #1e1e1e; color: #fff;
-            font-family: sans-serif; display: flex; flex-direction: column; height: 95vh; box-sizing: border-box;
+        :root { 
+            --bg: #090a0f; 
+            --panel: #121420; 
+            --accent: #ff4757; 
+            --white-key: #f1f2f6;
+            --black-key: #2f3542;
+            --gray: #2f3542; 
+            --text: #ffffff;
         }
-        h2 { margin: 5px 0; font-size: 1.2rem; text-align: center; }
-        .section { background: #2d2d2d; padding: 15px; border-radius: 8px; margin-bottom: 10px; text-align: center; }
-        button {
-            width: 100%; padding: 15px; margin-top: 8px; background: #28a745; color: white;
-            border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer;
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
         }
-        button:active { opacity: 0.8; }
-        #qr-canvas { background: white; padding: 10px; border-radius: 8px; margin: 10px auto; display: none; max-width: 200px; max-height: 200px; }
-        #reader { width: 100%; max-width: 300px; margin: 10px auto; background: #000; border-radius: 8px; overflow: hidden; display: none; }
-        #chat-area { flex-grow: 1; background: #252526; border-radius: 8px; padding: 10px; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px; }
-        .msg { padding: 8px 12px; border-radius: 12px; max-width: 80%; word-break: break-word; font-size: 14px; }
-        .msg.me { background: #007bff; align-self: flex-end; }
-        .msg.other { background: #3a3a3c; align-self: flex-start; }
-        .msg.system { background: transparent; color: #aaa; align-self: center; font-size: 12px; }
-        #input-row { display: flex; gap: 5px; }
-        #msg-input { flex-grow: 1; padding: 12px; border-radius: 8px; border: 1px solid #555; background: #3d3d3d; color: white; font-size: 16px; }
-        #status { text-align: center; color: #ffc107; font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+        body { 
+            margin: 0; 
+            padding: 12px; 
+            background: var(--bg); 
+            color: var(--text); 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            user-select: none; 
+            overflow: hidden; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: var(--panel); 
+            padding: 16px; 
+            border-radius: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            height: calc(100vh - 24px); 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+        }
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 16px; 
+        }
+        h1 { margin: 0; font-size: 22px; letter-spacing: 1px; color: var(--accent); }
+        .top-actions { display: flex; gap: 8px; }
+        
+        button, select { 
+            background: var(--gray); 
+            border: none; 
+            color: #fff; 
+            padding: 12px 16px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 14px; 
+        }
+        .metro-btn { background: #2ed573; }
+        .metro-btn.active { background: #ff4757; }
+
+        .piano-wrapper {
+            flex-grow: 1;
+            background: #000;
+            border-radius: 14px;
+            padding: 8px;
+            display: flex;
+            position: relative;
+            min-height: 0;
+            overflow-x: auto;
+            align-items: stretch;
+        }
+        .piano-keys {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        .key {
+            flex: 1;
+            position: relative;
+            background: var(--white-key);
+            border: 1px solid #dcdde1;
+            border-radius: 0 0 6px 6px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding-bottom: 16px;
+            color: #57606f;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 1;
+            transition: background 0.1s;
+        }
+        .key.black {
+            background: var(--black-key);
+            border: 1px solid #000;
+            height: 60%;
+            margin-left: -3.5%;
+            margin-right: -3.5%;
+            z-index: 2;
+            color: #a4b0be;
+            border-radius: 0 0 4px 4px;
+        }
+        .key:active, .key.pressed {
+            background: var(--accent) !important;
+            color: #fff !important;
+            padding-bottom: 10px;
+        }
+        body.phone-mode .key {
+            font-size: 0 !important;
+            padding-bottom: 24px;
+        }
+        body.phone-mode .key.black {
+            height: 55%;
+        }
+        .bottom-panel { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+            gap: 12px; 
+            background: rgba(0,0,0,0.3); 
+            padding: 14px; 
+            border-radius: 14px; 
+            margin-top: 16px; 
+        }
+        .group { display: flex; flex-direction: column; gap: 4px; }
+        .group label { font-size: 11px; text-transform: uppercase; color: #a4b0be; font-weight: bold; }
+        
+        input[type="range"] { 
+            -webkit-appearance: none; 
+            background: var(--gray); 
+            height: 6px; 
+            border-radius: 3px; 
+            outline: none; 
+            margin: 6px 0; 
+        }
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; 
+            width: 16px; 
+            height: 16px; 
+            border-radius: 50%; 
+            background: var(--accent); 
+            cursor: pointer; 
+        }
     </style>
 </head>
-<body>
-
-    <h2>QR LAN Чат</h2>
-    <div id="status">Шаг 1: Выберите роль на телефонах</div>
-
-    <div class="section" id="setup-block">
-        <div id="step-1">
-            <button id="btn-role-host" style="background:#28a745;">Я Создатель (Показать QR)</button>
-            <button id="btn-role-client" style="background:#007bff;">Я Подключаюсь (Сканировать QR)</button>
-        </div>
-
-        <div id="step-2" style="display:none;">
-            <p id="instruction" style="margin:5px 0; font-size:14px; color:#ffc107;"></p>
-            <!-- Место для показа QR кода -->
-            <canvas id="qr-canvas"></canvas>
-            <!-- Место для сканера камеры -->
-            <div id="reader"></div>
-            <button id="btn-next-step" style="background:#e0a800; color:black; display:none;"></button>
+<body class="pc-mode">
+<div class="container">
+    <div class="header">
+        <h1>WithFruit Piano</h1>
+        <div class="top-actions">
+            <button id="modeBtn">💻 Режим: ПК</button>
+            <select id="instSelect">
+                <option value="piano">🎹 Акустическое Пианино</option>
+                <option value="synth">🔮 Космический Синтезатор</option>
+                <option value="organ">🎚️ Электроорган</option>
+            </select>
+            <button id="metroBtn" class="metro-btn">⏱️ Метроном</button>
         </div>
     </div>
-
-    <div id="chat-area"><div class="msg system">Ждём подключения...</div></div>
-
-    <div id="input-row">
-        <input type="text" id="msg-input" placeholder="Сообщение..." disabled>
-        <button id="btn-send" style="width:auto; margin:0; padding:10px 20px; border-radius:8px;" disabled>➡️</button>
+    <div class="piano-wrapper">
+        <div class="piano-keys" id="pianoKeysContainer"></div>
     </div>
-
+    <div class="bottom-panel">
+        <div class="group">
+            <label>Темп метронома: <span id="bpmVal">120</span> BPM</label>
+            <input type="range" id="bpmInput" min="30" max="240" value="120">
+        </div>
+        <div class="group">
+            <label>Тюн (Питч): <span id="tuneVal">0</span> центов</label>
+            <input type="range" id="tuneInput" min="-500" max="500" value="0" step="50">
+        </div>
+        <div class="group">
+            <label>Delay (Эхо): <span id="delVal">0%</span></label>
+            <input type="range" id="delInput" min="0" max="100" value="20">
+        </div>
+        <div class="group">
+            <label>Reverb (Объем): <span id="revVal">0%</span></label>
+            <input type="range" id="revInput" min="0" max="100" value="30">
+        </div>
+    </div>
+</div>
 <script>
-    let pc = new RTCPeerConnection({ iceServers: [] }); 
-    let dataChannel = null;
-    let html5QrcodeScanner = null;
+    var audioCtx = null;
+    var mainOutput = null;
+    var delayNode = null;
+    var delayGain = null;
+    var reverbNode = null;
+    var reverbGain = null;
+    
+    var isPhoneMode = false;
+    var isMetroPlaying = false;
+    var metroTimer = null;
+    var currentBpm = 120;
+    var globalTune = 0;
 
-    const statusDiv = document.getElementById('status');
-    const chatArea = document.getElementById('chat-area');
-    const msgInput = document.getElementById('msg-input');
-    const btnSend = document.getElementById('btn-send');
-    const qrCanvas = document.getElementById('qr-canvas');
-    const readerDiv = document.getElementById('reader');
-    const btnNextStep = document.getElementById('btn-next-step');
-    const instruction = document.getElementById('instruction');
-
-    // Сжатие данных, чтобы QR-код был проще и легче сканировался
-    function pack(desc) { return btoa(JSON.stringify({t: desc.type, s: desc.sdp})); }
-    function unpack(str) { const d = JSON.parse(atob(str)); return new RTCSessionDescription({type: d.t, sdp: d.s}); }
-
-    // РОЛЬ ХОСТА (Создатель)
-    document.getElementById('btn-role-host').onclick = async function() {
-        showStep2("Генерация QR-кода...");
-        dataChannel = pc.createDataChannel("chatChannel");
-        setupDataChannelHandlers();
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        pc.onicecandidate = (e) => {
-            if (!e.candidate) {
-                instruction.innerText = "Телефон 2 должен отсканировать этот QR-код:";
-                qrCanvas.style.display = "block";
-                QRCode.toCanvas(qrCanvas, pack(pc.localDescription), { width: 200 });
-                
-                // Переходим к ожиданию ответа от клиента
-                btnNextStep.innerText = "Перейти к сканированию ответа";
-                btnNextStep.style.display = "block";
-                btnNextStep.onclick = () => {
-                    qrCanvas.style.display = "none";
-                    btnNextStep.style.display = "none";
-                    startScanner("Теперь отсканируйте ответный QR-код с экрана Телефона 2:");
-                };
-            }
-        };
+    var instrumentFx = {
+        piano: { delay: 10, reverb: 40 },
+        synth: { delay: 50, reverb: 60 },
+        organ: { delay: 0, reverb: 20 }
     };
 
-    // РОЛЬ КЛИЕНТА (Подключающийся)
-    document.getElementById('btn-role-client').onclick = function() {
-        pc.ondatachannel = (e) => { dataChannel = e.channel; setupDataChannelHandlers(); };
-        startScanner("Отсканируйте QR-код на экране Телефона 1:");
-    };
-
-    // Функция запуска камеры для сканирования
-    function startScanner(textPrompt) {
-        showStep2(textPrompt);
-        readerDiv.style.display = "block";
+    var NOTES = [
+        { name: "До",  freq: 261.63, key: "1", black: false },
+        { name: "До#", freq: 277.18, key: "2", black: true  },
+        { name: "Ре",  freq: 293.66, key: "3", black: false },
+        { name: "Ре#", freq: 311.13, key: "4", black: true  },
+        { name: "Ми",  freq: 329.63, key: "5", black: false },
+        { name: "Фа",  freq: 349.23, key: "6", black: false },
+        { name: "Фа#", freq: 369.99, key: "7", black: true  },
+        { name: "Соль", freq: 392.00, key: "8", black: false },
+        { name: "Соль#",freq: 415.30, key: "9", black: true  },
+        { name: "Ля",  freq: 440.00, key: "0", black: false },
+        { name: "Ля#", freq: 466.16, key: "-", black: true  },
+        { name: "Си",  freq: 493.88, key: "=", black: false },
         
-        html5QrcodeScanner = new Html5Qrcode("reader");
-        html5QrcodeScanner.start(
-            { facingMode: "environment" }, 
-            { fps: 10, qrbox: 250 },
-            async (decodedText) => {
-                // Код успешно отсканирован!
-                stopScanner();
-                try {
-                    const remoteDesc = unpack(decodedText);
-                    await pc.setRemoteDescription(remoteDesc);
+        { name: "До2", freq: 523.25, key: "q", black: false },
+        { name: "До#2",freq: 554.37, key: "w", black: true  },
+        { name: "Ре2", freq: 587.33, key: "e", black: false },
+        { name: "Ре#2",freq: 622.25, key: "r", black: true  },
+        { name: "Ми2", freq: 659.25, key: "t", black: false },
+        { name: "Фа2", freq: 698.46, key: "y", black: false },
+        { name: "Фа#2",freq: 739.99, key: "u", black: true  },
+        { name: "Соль2",freq: 783.99, key: "i", black: false },
+        { name: "Соль#2",freq: 830.61, key: "o", black: true  },
+        { name: "Ля2", freq: 880.00, key: "p", black: false },
+        { name: "Ля#2",freq: 932.33, key: "[", black: true  },
+        { name: "Си2", freq: 987.77, key: "]", black: false }
+    ];
 
-                    // Если мы клиент, создаем ответный QR
-                    if (pc.remoteDescription.type === "offer") {
-                        instruction.innerText = "Генерация ответного QR...";
-                        const answer = await pc.createAnswer();
-                        await pc.setLocalDescription(answer);
-
-                        pc.onicecandidate = (e) => {
-                            if (!e.candidate) {
-                                instruction.innerText = "Покажите этот ответный QR Создателю (Телефон 1):";
-                                qrCanvas.style.display = "block";
-                                QRCode.toCanvas(qrCanvas, pack(pc.localDescription), { width: 200 });
-                                statusDiv.innerText = "Статус: Ожидание подтверждения от Хоста";
-                            }
-                        };
-                    }
-                } catch(err) {
-                    alert("Ошибка сканирования. Попробуйте еще раз.");
-                    startScanner(textPrompt);
-                }
-            },
-            () => {} // Ошибка сканирования кадра (игнорируем)
-        ).catch(err => alert("Не удалось включить камеру. Проверьте HTTPS!"));
+    function initAudio() {
+        if (audioCtx) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return;
+        }
+        
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        mainOutput = audioCtx.createGain();
+        mainOutput.gain.value = 0.7;
+        mainOutput.connect(audioCtx.destination);
+        
+        delayNode = audioCtx.createDelay(1.0);
+        delayNode.delayTime.value = 0.35;
+        delayGain = audioCtx.createGain();
+        
+        delayNode.connect(delayGain);
+        delayGain.connect(mainOutput);
+        delayGain.connect(delayNode); 
+        
+        reverbNode = audioCtx.createConvolver();
+        reverbNode.buffer = generateReverbImpulse(1.8, 2.2);
+        reverbGain = audioCtx.createGain();
+        
+        reverbNode.connect(reverbGain);
+        reverbGain.connect(mainOutput);
+        
+        updateFxSliders();
     }
 
-    function stopScanner() {
-        if (html5QrcodeScanner) {
-            html5QrcodeScanner.stop().then(() => { readerDiv.style.display = "none"; });
+    function generateReverbImpulse(duration, decay) {
+        var sampleRate = audioCtx ? audioCtx.sampleRate : 44100;
+        var length = sampleRate * duration;
+        var impulse = audioCtx.createBuffer(2, length, sampleRate);
+        for (var channel = 0; channel < 2; channel++) {
+            var channelData = impulse.getChannelData(channel);
+            for (var i = 0; i < length; i++) {
+                channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+            }
+        }
+        return impulse;
+    }
+
+    function updateFxSliders() {
+        var currentInst = document.getElementById('instSelect').value;
+        var fx = instrumentFx[currentInst];
+        
+        document.getElementById('delInput').value = fx.delay;
+        document.getElementById('delVal').innerText = fx.delay + "%";
+        document.getElementById('revInput').value = fx.reverb;
+        document.getElementById('revVal').innerText = fx.reverb + "%";
+        
+        if (delayGain) {
+            delayGain.gain.setValueAtTime((fx.delay / 100) * 0.5, audioCtx.currentTime);
+        }
+        if (reverbGain) {
+            reverbGain.gain.setValueAtTime((fx.reverb / 100) * 0.6, audioCtx.currentTime);
+        }
+    }
+</script>
+<script>
+    function buildPiano() {
+        var container = document.getElementById('pianoKeysContainer');
+        container.innerHTML = '';
+        
+        NOTES.forEach(function(note, index) {
+            var keyDiv = document.createElement('div');
+            keyDiv.className = 'key' + (note.black ? ' black' : '');
+            keyDiv.id = 'piano-key-' + index;
+            keyDiv.innerHTML = '<span>' + note.name + '<br><small>[' + note.key + ']</small></span>';
+            
+            keyDiv.addEventListener('mousedown', function() {
+                initAudio();
+                pressNote(index);
+            });
+            keyDiv.addEventListener('touchstart', function(e) {
+                initAudio();
+                pressNote(index);
+                e.preventDefault();
+            }, {passive: false});
+            
+            container.appendChild(keyDiv);
+        });
+    }
+
+    function pressNote(index) {
+        var note = NOTES[index];
+        var type = document.getElementById('instSelect').value;
+        var targetFreq = note.freq * Math.pow(2, globalTune / 1200);
+        var oscGain = audioCtx.createGain();
+        oscGain.connect(mainOutput);
+        oscGain.connect(delayNode);
+        oscGain.connect(reverbNode);
+
+        var el = document.getElementById('piano-key-' + index);
+        if (el) {
+            el.classList.add('pressed');
+            setTimeout(function() {
+                el.classList.remove('pressed');
+            }, 200);
+        }
+
+        if (type === 'piano') {
+            var o1 = audioCtx.createOscillator();
+            var o2 = audioCtx.createOscillator();
+            o1.type = 'sine'; 
+            o1.frequency.setValueAtTime(targetFreq, audioCtx.currentTime);
+            o2.type = 'triangle'; 
+            o2.frequency.setValueAtTime(targetFreq * 2, audioCtx.currentTime);
+            
+            oscGain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            oscGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+            
+            o1.connect(oscGain); o2.connect(oscGain);
+            o1.start(); o2.start();
+            o1.stop(audioCtx.currentTime + 1.3); o2.stop(audioCtx.currentTime + 1.3);
+            
+        } else if (type === 'synth') {
+            var o = audioCtx.createOscillator();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(targetFreq, audioCtx.currentTime);
+            oscGain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            oscGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+            o.connect(oscGain);
+            o.start();
+            o.stop(audioCtx.currentTime + 0.65);
+            
+        } else if (type === 'organ') {
+            var o1 = audioCtx.createOscillator();
+            var o2 = audioCtx.createOscillator();
+            o1.type = 'square'; 
+            o1.frequency.setValueAtTime(targetFreq, audioCtx.currentTime);
+            o2.type = 'square'; 
+            o2.frequency.setValueAtTime(targetFreq * 1.5, audioCtx.currentTime);
+            
+            oscGain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            oscGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+            
+            o1.connect(oscGain); o2.connect(oscGain);
+            o1.start(); o2.start();
+            o1.stop(audioCtx.currentTime + 0.85); o2.stop(audioCtx.currentTime + 0.85);
         }
     }
 
-    function setupDataChannelHandlers() {
-        dataChannel.onopen = () => {
-            stopScanner();
-            statusDiv.innerText = "Подключено по LAN!";
-            statusDiv.style.color = "#28a745";
-            document.getElementById('setup-block').style.display = "none";
-            msgInput.disabled = false; btnSend.disabled = false;
-            logSystemMessage("Связь установлена напрямую!");
-        };
-        dataChannel.onclose = () => {
-            statusDiv.innerText = "Отключено"; statusDiv.style.color = "#dc3545";
-            msgInput.disabled = true; btnSend.disabled = true;
-        };
-        dataChannel.onmessage = (e) => appendMessage(e.data, 'other');
-    }
-
-    function sendMessage() {
-        const text = msgInput.value.trim();
-        if (!text || !dataChannel || dataChannel.readyState !== "open") return;
-        dataChannel.send(text);
-        appendMessage(text, 'me');
-        msgInput.value = "";
-    }
-
-    btnSend.onclick = sendMessage;
-    msgInput.onkeydown = (e) => { if (e.key === 'Enter') sendMessage(); };
-
-    function showStep2(text) {
-        document.getElementById('step-1').style.display = 'none';
-        document.getElementById('step-2').style.display = 'block';
-        instruction.innerText = text;
-        statusDiv.innerText = "Статус: Сопряжение по QR";
-    }
-
-    function appendMessage(text, side) {
-        const el = document.createElement('div'); el.classList.add('msg', side); el.innerText = text;
-        chatArea.appendChild(el); chatArea.scrollTop = chatArea.scrollHeight;
-    }
-
-    function logSystemMessage(text) {
-        const el = document.createElement('div'); el.classList.add('msg', 'system'); el.innerText = text;
-        chatArea.appendChild(el);
+    function playMetroTick() {
+        if (!isMetroPlaying || !audioCtx) return;
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.06);
+        metroTimer = setTimeout(playMetroTick, (60 / currentBpm) * 1000);
     }
 </script>
+<script>
+    window.addEventListener('DOMContentLoaded', function() {
+        buildPiano();
+
+        window.addEventListener('keydown', function(e) {
+            var keyStr = e.key.toLowerCase();
+            var index = -1;
+            for (var i = 0; i < NOTES.length; i++) {
+                if (NOTES[i].key === keyStr) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index !== -1) {
+                initAudio();
+                pressNote(index);
+            }
+        });
+
+        document.getElementById('modeBtn').addEventListener('click', function() {
+            isPhoneMode = !isPhoneMode;
+            if (isPhoneMode) {
+                document.body.className = "phone-mode";
+                this.innerText = "📱 Режим: Телефон";
+                this.style.background = "var(--accent)";
+            } else {
+                document.body.className = "pc-mode";
+                this.innerText = "💻 Режим: ПК";
+                this.style.background = "var(--gray)";
+            }
+        });
+
+        document.getElementById('instSelect').addEventListener('change', function() {
+            if (audioCtx) {
+                updateFxSliders();
+            }
+        });
+
+        document.getElementById('metroBtn').addEventListener('click', function() {
+            initAudio();
+            isMetroPlaying = !isMetroPlaying;
+            if (isMetroPlaying) {
+                this.classList.add('active');
+                playMetroTick();
+            } else {
+                this.classList.remove('active');
+                clearTimeout(metroTimer);
+            }
+        });
+
+        document.getElementById('bpmInput').addEventListener('input', function(e) {
+            currentBpm = parseInt(e.target.value);
+            document.getElementById('bpmVal').innerText = currentBpm;
+        });
+
+        document.getElementById('tuneInput').addEventListener('input', function(e) {
+            globalTune = parseInt(e.target.value);
+            document.getElementById('tuneVal').innerText = globalTune > 0 ? "+" + globalTune : globalTune;
+        });
+
+        document.getElementById('delInput').addEventListener('input', function(e) {
+            initAudio();
+            var val = parseInt(e.target.value);
+            var inst = document.getElementById('instSelect').value;
+            instrumentFx[inst].delay = val;
+            document.getElementById('delVal').innerText = val + "%";
+            delayGain.gain.setValueAtTime((val / 100) * 0.5, audioCtx.currentTime);
+        });
+
+        document.getElementById('revInput').addEventListener('input', function(e) {
+            initAudio();
+            var val = parseInt(e.target.value);
+            var inst = document.getElementById('instSelect').value;
+            instrumentFx[inst].reverb = val;
+            document.getElementById('revVal').innerText = val + "%";
+            reverbGain.gain.setValueAtTime((val / 100) * 0.6, audioCtx.currentTime);
+        });
+    });
+</script>
 </body>
-</html>
+    </html>
+    
